@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>AR Magazine - A for Apple</title>
+
+    <!-- A-Frame creates the 3D/AR scene -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-master.min.js"></script>
+
+    <!-- MindAR performs image recognition -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            padding: 20px;
+            text-align: center;
+            background: white;
+        }
+
+        #start-screen h1 {
+            margin-bottom: 10px;
+        }
+
+        #start-button {
+            margin-top: 20px;
+            padding: 14px 28px;
+
+            border: none;
+            border-radius: 8px;
+
+            font-size: 18px;
+            color: white;
+            background: #e53935;
+
+            cursor: pointer;
+        }
+
+        #instructions {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            z-index: 10;
+
+            width: 85%;
+            max-width: 420px;
+
+            padding: 12px;
+            border-radius: 8px;
+
+            text-align: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- This screen appears before the camera starts -->
+    <div id="start-screen">
+        <h1>A for Apple AR</h1>
+
+        <p>
+            Tap the button below, allow camera access,
+            and point your mobile camera at the Apple page.
+        </p>
+
+        <button id="start-button">
+            Start AR
+        </button>
+    </div>
+
+    <!-- Instructions displayed above the camera -->
+    <div id="instructions">
+        Point the camera at the complete A for Apple page.
+    </div>
+
+    <!-- AR Scene -->
+    <a-scene
+        mindar-image="
+            imageTargetSrc: ./assets/targets.mind;
+            autoStart: false;
+        "
+        embedded
+        color-space="sRGB"
+        renderer="
+            colorManagement: true;
+            physicallyCorrectLights: true;
+        "
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false"
+    >
+
+        <!-- Files loaded before they are displayed -->
+        <a-assets>
+            <video
+                id="apple-video"
+                src="./assets/apple-video.mp4"
+                preload="auto"
+                playsinline
+                webkit-playsinline
+            ></video>
+        </a-assets>
+
+        <!-- Basic AR camera -->
+        <a-camera
+            position="0 0 0"
+            look-controls="enabled: false"
+        ></a-camera>
+
+        <!-- targetIndex 0 means the first compiled image -->
+        <a-entity
+            id="apple-target"
+            mindar-image-target="targetIndex: 0"
+        >
+
+            <!-- Video plane displayed over the printed image -->
+            <a-video
+                src="#apple-video"
+                position="0 0 0.01"
+                width="1"
+                height="1"
+            ></a-video>
+
+        </a-entity>
+
+    </a-scene>
+
+    <script>
+        const scene = document.querySelector("a-scene");
+        const startButton = document.querySelector("#start-button");
+        const startScreen = document.querySelector("#start-screen");
+        const target = document.querySelector("#apple-target");
+        const video = document.querySelector("#apple-video");
+        const instructions = document.querySelector("#instructions");
+
+        startButton.addEventListener("click", async () => {
+            try {
+ // Prepare the video during the user's button click.
+                video.muted = true;
+                await video.play();
+                video.pause();
+                video.currentTime = 0;
+                video.muted = false;
+                // Starts MindAR and requests camera permission.
+                await scene.systems["mindar-image-system"].start();
+
+                startScreen.style.display = "none";
+                
+                instructions.textContent =
+                    "Point the camera at the complete A for Apple page.";
+            } catch (error) {
+                console.error(error);
+
+                alert(
+                    "The camera could not start. Please allow camera permission and try again."
+                );
+            }
+        });
+
+        // Runs when the Apple target is recognized.
+        target.addEventListener("targetFound", async () => {
+            instructions.textContent = "Apple page detected!";
+
+            try {
+                video.currentTime = 0;
+                await video.play();
+            } catch (error) {
+                console.error("Video could not play:", error);
+
+                instructions.textContent =
+                    "Page detected, but the video could not start. Tap the screen and try again.";
+            }
+        });
+
+        // Runs when the camera can no longer see the target.
+        target.addEventListener("targetLost", () => {
+            video.pause();
+
+            instructions.textContent =
+                "Target lost. Point the camera at the Apple page again.";
+        });
+    </script>
+
+</body>
+</html>
