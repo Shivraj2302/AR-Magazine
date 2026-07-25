@@ -9,10 +9,12 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>AR TEST VERSION 6</title>
+    <title>AR Magazine - A for Apple</title>
 
+    <!-- A-Frame library -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
+    <!-- MindAR image tracking library -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
@@ -21,18 +23,52 @@
             width: 100%;
             height: 100%;
             margin: 0;
+            padding: 0;
             overflow: hidden;
+            background: black;
+            font-family: Arial, sans-serif;
         }
 
         a-scene {
-            width: 100%;
-            height: 100%;
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100dvh !important;
+        }
+
+        .a-canvas {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+        }
+
+        #instructions {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            z-index: 1000;
+
+            width: 88%;
+            max-width: 450px;
+            padding: 14px;
+
+            box-sizing: border-box;
+            border-radius: 12px;
+
+            text-align: center;
+            font-size: 18px;
+            color: white;
+            background: rgba(0, 0, 0, 0.72);
+
+            transform: translateX(-50%);
         }
     </style>
 </head>
 
 <body>
-<h2 id="version-test">VERSION 6</h2>
 
     <div id="instructions">
         Point the complete Apple page toward the camera.
@@ -53,6 +89,18 @@
         device-orientation-permission-ui="enabled: false"
     >
 
+        <a-assets>
+            <video
+                id="apple-video"
+                src="./assets/apple-video.mp4"
+                preload="auto"
+                muted
+                loop
+                playsinline
+                webkit-playsinline
+            ></video>
+        </a-assets>
+
         <a-camera
             position="0 0 0"
             look-controls="enabled: false"
@@ -62,20 +110,48 @@
             id="apple-target"
             mindar-image-target="targetIndex: 0"
         >
+
             <a-plane
                 position="0 0 0.02"
                 width="1"
                 height="1.4"
                 material="
-                    color: red;
-                    opacity: 0.85;
-                    transparent: true;
+                    src: #apple-video;
+                    shader: flat;
                     side: double;
                 "
             ></a-plane>
+
         </a-entity>
 
     </a-scene>
+
+    <script>
+        const target = document.querySelector("#apple-target");
+        const video = document.querySelector("#apple-video");
+        const instructions = document.querySelector("#instructions");
+
+        target.addEventListener("targetFound", async () => {
+            instructions.textContent = "Apple page detected!";
+
+            try {
+                video.currentTime = 0;
+                await video.play();
+            } catch (error) {
+                console.error("Video playback error:", error);
+
+                instructions.textContent =
+                    "Apple detected, but the video could not play.";
+            }
+        });
+
+        target.addEventListener("targetLost", () => {
+            video.pause();
+
+            instructions.textContent =
+                "Target lost. Point the camera at the Apple page again.";
+        });
+    </script>
 
 </body>
 
