@@ -43,7 +43,6 @@
             height: 100dvh !important;
         }
 
-        /* Hide A-Frame VR button */
         .a-enter-vr-button {
             display: none !important;
         }
@@ -185,16 +184,20 @@
             id="apple-target"
             mindar-image-target="targetIndex: 0"
         >
+
+            <!-- Horizontal 16:9 video -->
             <a-plane
+                id="video-plane"
                 position="0 0 0.02"
-                width="1"
-                height="1.5"
+                width="1.78"
+                height="1"
                 material="
                     src: #apple-video;
                     shader: flat;
                     side: double;
                 "
             ></a-plane>
+
         </a-entity>
 
     </a-scene>
@@ -203,6 +206,7 @@
         const scene = document.querySelector("a-scene");
         const target = document.querySelector("#apple-target");
         const video = document.querySelector("#apple-video");
+        const videoPlane = document.querySelector("#video-plane");
 
         const startScreen = document.querySelector("#start-screen");
         const startButton = document.querySelector("#start-button");
@@ -212,13 +216,39 @@
         let lostTargetTimer = null;
         let videoHasStarted = false;
 
+        /*
+         * Automatically maintain the video's real horizontal aspect ratio.
+         */
+        video.addEventListener("loadedmetadata", () => {
+            const aspectRatio =
+                video.videoWidth / video.videoHeight;
+
+            /*
+             * Keep the video horizontal and wide.
+             */
+            if (aspectRatio >= 1) {
+                videoPlane.setAttribute("width", 1.9);
+                videoPlane.setAttribute(
+                    "height",
+                    1.9 / aspectRatio
+                );
+            } else {
+                /*
+                 * If the uploaded video is portrait,
+                 * force it into a horizontal display area.
+                 */
+                videoPlane.setAttribute("width", 1.9);
+                videoPlane.setAttribute("height", 1.07);
+            }
+        });
+
         startButton.addEventListener("click", async () => {
             startButton.disabled = true;
             startButton.textContent = "Starting camera...";
 
             try {
                 /*
-                 * Unlock sound through a real user interaction.
+                 * Unlock sound through the user's button click.
                  */
                 video.muted = false;
                 video.volume = 1;
@@ -255,9 +285,6 @@
         target.addEventListener("targetFound", async () => {
             targetIsVisible = true;
 
-            /*
-             * Cancel the delayed pause when the target quickly returns.
-             */
             if (lostTargetTimer) {
                 clearTimeout(lostTargetTimer);
                 lostTargetTimer = null;
@@ -269,10 +296,6 @@
                 video.muted = false;
                 video.volume = 1;
 
-                /*
-                 * Start at zero only the first time.
-                 * Do not restart after every brief tracking interruption.
-                 */
                 if (!videoHasStarted) {
                     video.currentTime = 0;
                     videoHasStarted = true;
@@ -295,10 +318,6 @@
             instructions.textContent =
                 "Hold steady—looking for the Apple page...";
 
-            /*
-             * Wait before pausing.
-             * This prevents short tracking losses from interrupting the video.
-             */
             lostTargetTimer = setTimeout(() => {
                 if (!targetIsVisible) {
                     video.pause();
@@ -309,20 +328,14 @@
             }, 800);
         });
 
-        /*
-         * When the video finishes, show a replay message.
-         */
         video.addEventListener("ended", () => {
             videoHasStarted = false;
             video.currentTime = 0;
 
             instructions.textContent =
-                "Video finished. Move away and scan again to replay.";
+                "Video finished. Scan the Apple page again to replay.";
         });
 
-        /*
-         * Backup tap-to-play behaviour.
-         */
         document.body.addEventListener("click", async () => {
             if (!targetIsVisible || !video.paused) {
                 return;
