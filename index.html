@@ -120,6 +120,7 @@
                 id="apple-video"
                 src="./assets/apple-video.mp4"
                 preload="auto"
+                muted
                 playsinline
                 webkit-playsinline
             ></video>
@@ -138,12 +139,15 @@
         >
 
             <!-- Video plane displayed over the printed image -->
-            <a-video
-                src="#apple-video"
-                position="0 0 0.01"
-                width="1"
-                height="1"
-            ></a-video>
+            <a-plane
+         position="0 0 0.01"
+         width="1"
+         height="1"
+         material="
+        src: #apple-video;
+        shader: flat;
+    "
+></a-plane>
 
         </a-entity>
 
@@ -157,52 +161,47 @@
         const video = document.querySelector("#apple-video");
         const instructions = document.querySelector("#instructions");
 
-        startButton.addEventListener("click", async () => {
-            try {
- // Prepare the video during the user's button click.
-                video.muted = true;
-                await video.play();
-                video.pause();
-                video.currentTime = 0;
-                video.muted = false;
-                // Starts MindAR and requests camera permission.
-                await scene.systems["mindar-image-system"].start();
+      startButton.addEventListener("click", async () => {
+    try {
+        await scene.systems["mindar-image-system"].start();
 
-                startScreen.style.display = "none";
-                
-                instructions.textContent =
-                    "Point the camera at the complete A for Apple page.";
-            } catch (error) {
-                console.error(error);
+        startScreen.style.display = "none";
 
-                alert(
-                    "The camera could not start. Please allow camera permission and try again."
-                );
-            }
-        });
+        instructions.textContent =
+            "Point the camera at the complete A for Apple page.";
+    } catch (error) {
+        console.error("Camera start error:", error);
 
+        alert(
+            "The camera could not start. Please allow camera permission and try again."
+        );
+    }
+});
         // Runs when the Apple target is recognized.
         target.addEventListener("targetFound", async () => {
-            instructions.textContent = "Apple page detected!";
+    instructions.textContent = "Apple page detected!";
 
-            try {
-                video.currentTime = 0;
-                await video.play();
-            } catch (error) {
-                console.error("Video could not play:", error);
+    try {
+        video.currentTime = 0;
+        video.muted = true;
+        await video.play();
 
-                instructions.textContent =
-                    "Page detected, but the video could not start. Tap the screen and try again.";
-            }
-        });
+        console.log("Apple video started.");
+    } catch (error) {
+        console.error("Video playback error:", error);
+
+        instructions.textContent =
+            "Apple detected, but the video could not play.";
+    }
+});
 
         // Runs when the camera can no longer see the target.
         target.addEventListener("targetLost", () => {
-            video.pause();
+    video.pause();
 
-            instructions.textContent =
-                "Target lost. Point the camera at the Apple page again.";
-        });
+    instructions.textContent =
+        "Target lost. Point the camera at the Apple page again.";
+});
     </script>
 
 </body>
