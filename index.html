@@ -31,21 +31,23 @@
 
         a-scene {
             position: fixed !important;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100vw !important;
             height: 100dvh !important;
         }
 
         .a-canvas {
             position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
+            inset: 0 !important;
             width: 100vw !important;
             height: 100dvh !important;
         }
 
-        /* Opening screen */
+        /* Hide A-Frame VR button */
+        .a-enter-vr-button {
+            display: none !important;
+        }
+
         #start-screen {
             position: fixed;
             inset: 0;
@@ -58,6 +60,7 @@
 
             padding: 25px;
             box-sizing: border-box;
+
             text-align: center;
             background: white;
         }
@@ -70,12 +73,13 @@
         #start-screen p {
             max-width: 420px;
             margin: 0;
+
             line-height: 1.5;
             color: #333;
         }
 
         #start-button {
-            margin-top: 25px;
+            margin-top: 24px;
             padding: 15px 30px;
 
             border: none;
@@ -83,6 +87,7 @@
 
             font-size: 18px;
             font-weight: bold;
+
             color: white;
             background: #e53935;
 
@@ -91,10 +96,8 @@
 
         #start-button:disabled {
             opacity: 0.6;
-            cursor: not-allowed;
         }
 
-        /* Camera instructions */
         #instructions {
             position: fixed;
             top: 18px;
@@ -102,6 +105,7 @@
             z-index: 2000;
 
             display: none;
+
             width: 88%;
             max-width: 450px;
             padding: 14px;
@@ -111,6 +115,7 @@
 
             text-align: center;
             font-size: 18px;
+
             color: white;
             background: rgba(0, 0, 0, 0.72);
 
@@ -121,7 +126,6 @@
 
 <body>
 
-    <!-- The user must tap this button to permit sound -->
     <div id="start-screen">
         <h1>A for Apple AR</h1>
 
@@ -143,6 +147,13 @@
         mindar-image="
             imageTargetSrc: ./assets/targets.mind;
             autoStart: false;
+            uiLoading: no;
+            uiScanning: no;
+            uiError: no;
+            filterMinCF: 0.001;
+            filterBeta: 0.01;
+            warmupTolerance: 3;
+            missTolerance: 8;
         "
         color-space="sRGB"
         renderer="
@@ -154,7 +165,7 @@
         device-orientation-permission-ui="enabled: false"
     >
 
-        <a-assets timeout="15000">
+        <a-assets timeout="20000">
             <video
                 id="apple-video"
                 src="./assets/apple-video.mp4"
@@ -177,7 +188,7 @@
             <a-plane
                 position="0 0 0.02"
                 width="1"
-                height="1.4"
+                height="1.5"
                 material="
                     src: #apple-video;
                     shader: flat;
@@ -198,18 +209,16 @@
         const instructions = document.querySelector("#instructions");
 
         let targetIsVisible = false;
+        let lostTargetTimer = null;
+        let videoHasStarted = false;
 
-        /*
-         * The user button click unlocks sound and starts the camera.
-         */
         startButton.addEventListener("click", async () => {
             startButton.disabled = true;
             startButton.textContent = "Starting camera...";
 
             try {
                 /*
-                 * Start the video once during the user click.
-                 * This gives the browser permission to play it with sound later.
+                 * Unlock sound through a real user interaction.
                  */
                 video.muted = false;
                 video.volume = 1;
@@ -221,7 +230,7 @@
                 video.currentTime = 0;
 
                 /*
-                 * Start MindAR and request camera permission.
+                 * Start MindAR.
                  */
                 await scene.systems["mindar-image-system"].start();
 
@@ -229,7 +238,7 @@
                 instructions.style.display = "block";
 
                 instructions.textContent =
-                    "Point the complete Apple page toward the camera.";
+                    "Keep the complete Apple page inside the camera.";
             } catch (error) {
                 console.error("AR start error:", error);
 
@@ -238,50 +247,81 @@
 
                 alert(
                     "The camera or audio could not start. " +
-                    "Please allow camera permission and make sure media volume is turned up."
+                    "Please allow camera access and try again."
                 );
             }
         });
 
-        /*
-         * Play the video when the Apple page is detected.
-         */
         target.addEventListener("targetFound", async () => {
             targetIsVisible = true;
+
+            /*
+             * Cancel the delayed pause when the target quickly returns.
+             */
+            if (lostTargetTimer) {
+                clearTimeout(lostTargetTimer);
+                lostTargetTimer = null;
+            }
 
             instructions.textContent = "Apple page detected!";
 
             try {
-                video.pause();
-                video.currentTime = 0;
                 video.muted = false;
                 video.volume = 1;
 
-                await video.play();
+                /*
+                 * Start at zero only the first time.
+                 * Do not restart after every brief tracking interruption.
+                 */
+                if (!videoHasStarted) {
+                    video.currentTime = 0;
+                    videoHasStarted = true;
+                }
 
-                console.log("Apple video started with sound.");
+                if (video.paused) {
+                    await video.play();
+                }
             } catch (error) {
                 console.error("Video playback error:", error);
 
                 instructions.textContent =
-                    "Apple detected. Tap the screen once to enable sound.";
+                    "Apple detected. Tap the screen once to play.";
             }
         });
 
-        /*
-         * Pause the video when the target disappears.
-         */
         target.addEventListener("targetLost", () => {
             targetIsVisible = false;
-            video.pause();
 
             instructions.textContent =
-                "Target lost. Point the camera at the Apple page again.";
+                "Hold steady—looking for the Apple page...";
+
+            /*
+             * Wait before pausing.
+             * This prevents short tracking losses from interrupting the video.
+             */
+            lostTargetTimer = setTimeout(() => {
+                if (!targetIsVisible) {
+                    video.pause();
+
+                    instructions.textContent =
+                        "Keep the complete Apple page inside the camera.";
+                }
+            }, 800);
         });
 
         /*
-         * Backup option:
-         * If Chrome still blocks sound, tapping the camera starts it.
+         * When the video finishes, show a replay message.
+         */
+        video.addEventListener("ended", () => {
+            videoHasStarted = false;
+            video.currentTime = 0;
+
+            instructions.textContent =
+                "Video finished. Move away and scan again to replay.";
+        });
+
+        /*
+         * Backup tap-to-play behaviour.
          */
         document.body.addEventListener("click", async () => {
             if (!targetIsVisible || !video.paused) {
