@@ -19,6 +19,10 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         html,
         body {
             width: 100%;
@@ -45,47 +49,60 @@
             height: 100dvh !important;
         }
 
-        /* Hide VR button */
+        /* Hide A-Frame VR button */
         .a-enter-vr-button {
             display: none !important;
         }
 
-        /* Opening screen */
+        /* Starting screen */
         #start-screen {
             position: fixed;
             inset: 0;
-            z-index: 5000;
+            z-index: 6000;
 
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
 
-            padding: 25px;
-            box-sizing: border-box;
-
+            padding: 28px;
             text-align: center;
-            background: white;
+
+            background:
+                radial-gradient(
+                    circle at top,
+                    #fff7dd 0%,
+                    #ffffff 55%,
+                    #ffe5e5 100%
+                );
         }
 
         #start-screen h1 {
             margin: 0 0 12px;
+            font-size: 34px;
             color: #d71920;
+        }
+
+        #start-screen .apple-icon {
+            margin-bottom: 12px;
+            font-size: 72px;
         }
 
         #start-screen p {
             max-width: 430px;
             margin: 0;
-            line-height: 1.5;
+
+            font-size: 17px;
+            line-height: 1.55;
             color: #333;
         }
 
         #start-button {
-            margin-top: 24px;
-            padding: 15px 30px;
+            margin-top: 26px;
+            padding: 15px 32px;
 
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
 
             font-size: 18px;
             font-weight: bold;
@@ -93,11 +110,14 @@
             color: white;
             background: #e53935;
 
+            box-shadow: 0 6px 18px rgba(229, 57, 53, 0.35);
+
             cursor: pointer;
         }
 
         #start-button:disabled {
             opacity: 0.6;
+            cursor: not-allowed;
         }
 
         /* Instruction message */
@@ -105,16 +125,15 @@
             position: fixed;
             top: 18px;
             left: 50%;
-            z-index: 3500;
+            z-index: 4000;
 
             display: none;
 
             width: 88%;
-            max-width: 450px;
-            padding: 12px;
+            max-width: 460px;
 
-            box-sizing: border-box;
-            border-radius: 10px;
+            padding: 12px 15px;
+            border-radius: 12px;
 
             text-align: center;
             font-size: 16px;
@@ -126,32 +145,75 @@
         }
 
         /*
-         * Fixed video container.
-         * It is connected to the mobile screen,
-         * not to the printed Apple target.
+         * Background shown around the video.
+         * The camera remains visible through it.
          */
+        #video-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 4500;
+
+            display: none;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255, 105, 105, 0.28),
+                    rgba(255, 213, 128, 0.22),
+                    rgba(128, 196, 255, 0.25)
+                );
+
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        #video-backdrop.visible {
+            opacity: 1;
+        }
+
+        /* Fixed video box */
         #video-overlay {
             position: fixed;
             top: 50%;
             left: 50%;
-            z-index: 4000;
+            z-index: 5000;
 
             display: none;
 
-            width: 94vw;
-            max-width: 900px;
+            width: min(94vw, 900px);
             aspect-ratio: 16 / 9;
 
-            border: 4px solid white;
-            border-radius: 14px;
-
-            box-sizing: border-box;
             overflow: hidden;
 
-            background: black;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+            border: 4px solid white;
+            border-radius: 16px;
 
-            transform: translate(-50%, -50%);
+            background: black;
+
+            box-shadow:
+                0 12px 45px rgba(0, 0, 0, 0.75),
+                0 0 30px rgba(255, 255, 255, 0.18);
+
+            opacity: 0;
+
+            transform:
+                translate(-50%, -50%)
+                scale(0.88);
+
+            transition:
+                opacity 0.35s ease,
+                transform 0.35s ease;
+        }
+
+        #video-overlay.visible {
+            opacity: 1;
+
+            transform:
+                translate(-50%, -50%)
+                scale(1);
         }
 
         #apple-video {
@@ -163,8 +225,9 @@
             background: black;
 
             /*
-             * contain = shows the complete video.
-             * No cropping and no stretching.
+             * contain:
+             * Displays the complete 1920 × 1080 video.
+             * It does not stretch or crop it.
              */
             object-fit: contain;
         }
@@ -172,41 +235,74 @@
         /* Close button */
         #close-video {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 9px;
+            right: 9px;
             z-index: 10;
 
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
 
-            border: none;
+            border: 2px solid rgba(255, 255, 255, 0.7);
             border-radius: 50%;
 
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
-            line-height: 38px;
+            line-height: 34px;
 
             color: white;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.72);
 
             cursor: pointer;
         }
 
-        /*
-         * When the phone is held horizontally,
-         * limit video height so it remains visible.
-         */
+        /* Replay screen shown after video completes */
+        #replay-panel {
+            position: absolute;
+            inset: 0;
+            z-index: 8;
+
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            text-align: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.72);
+        }
+
+        #replay-panel h2 {
+            margin: 0 0 15px;
+            font-size: 26px;
+        }
+
+        #replay-button {
+            padding: 13px 26px;
+
+            border: none;
+            border-radius: 10px;
+
+            font-size: 17px;
+            font-weight: bold;
+
+            color: white;
+            background: #e53935;
+
+            cursor: pointer;
+        }
+
+        /* Landscape phone layout */
         @media screen and (orientation: landscape) {
             #video-overlay {
                 width: auto;
                 height: 88dvh;
-                max-height: 88dvh;
+                max-width: 94vw;
                 aspect-ratio: 16 / 9;
             }
 
             #instructions {
-                top: 8px;
-                padding: 8px;
+                top: 7px;
+                padding: 8px 12px;
                 font-size: 14px;
             }
         }
@@ -215,26 +311,33 @@
 
 <body>
 
-    <!-- Start screen -->
+    <!-- Opening screen -->
     <div id="start-screen">
+
+        <div class="apple-icon">🍎</div>
+
         <h1>A for Apple AR</h1>
 
         <p>
-            Tap the button, allow camera access and point the camera
-            at the complete Apple page.
+            Tap the button, allow camera access and point your phone
+            at the complete A for Apple page.
         </p>
 
         <button id="start-button">
             Start AR with Sound
         </button>
+
     </div>
 
-    <!-- Instructions -->
+    <!-- Camera instructions -->
     <div id="instructions">
-        Point the camera at the complete Apple page.
+        Point the camera at the complete A for Apple page.
     </div>
 
-    <!-- Fixed horizontal video box -->
+    <!-- Custom background around the video -->
+    <div id="video-backdrop"></div>
+
+    <!-- Fixed centred video -->
     <div id="video-overlay">
 
         <button
@@ -252,9 +355,19 @@
             webkit-playsinline
         ></video>
 
+        <div id="replay-panel">
+
+            <h2>A for Apple 🍎</h2>
+
+            <button id="replay-button">
+                Play Again
+            </button>
+
+        </div>
+
     </div>
 
-    <!-- MindAR camera scene -->
+    <!-- AR camera scene -->
     <a-scene
         mindar-image="
             imageTargetSrc: ./assets/targets.mind;
@@ -282,10 +395,7 @@
             look-controls="enabled: false"
         ></a-camera>
 
-        <!--
-            This entity only detects the Apple page.
-            No video plane is placed inside it.
-        -->
+        <!-- This entity is only for detecting the Apple page -->
         <a-entity
             id="apple-target"
             mindar-image-target="targetIndex: 0"
@@ -294,8 +404,11 @@
     </a-scene>
 
     <script>
-        const scene = document.querySelector("a-scene");
-        const target = document.querySelector("#apple-target");
+        const scene =
+            document.querySelector("a-scene");
+
+        const target =
+            document.querySelector("#apple-target");
 
         const startScreen =
             document.querySelector("#start-screen");
@@ -306,6 +419,9 @@
         const instructions =
             document.querySelector("#instructions");
 
+        const videoBackdrop =
+            document.querySelector("#video-backdrop");
+
         const videoOverlay =
             document.querySelector("#video-overlay");
 
@@ -315,13 +431,70 @@
         const closeVideoButton =
             document.querySelector("#close-video");
 
-        let videoOpened = false;
+        const replayPanel =
+            document.querySelector("#replay-panel");
+
+        const replayButton =
+            document.querySelector("#replay-button");
+
+        let videoIsOpen = false;
         let targetLostTimer = null;
 
         /*
+         * Display the fixed video box.
+         */
+        function showVideoOverlay() {
+            videoBackdrop.style.display = "block";
+            videoOverlay.style.display = "block";
+
+            requestAnimationFrame(() => {
+                videoBackdrop.classList.add("visible");
+                videoOverlay.classList.add("visible");
+            });
+        }
+
+        /*
+         * Hide the fixed video box smoothly.
+         */
+        function hideVideoOverlay() {
+            videoBackdrop.classList.remove("visible");
+            videoOverlay.classList.remove("visible");
+
+            setTimeout(() => {
+                videoBackdrop.style.display = "none";
+                videoOverlay.style.display = "none";
+            }, 350);
+        }
+
+        /*
+         * Play the Apple video from the beginning.
+         */
+        async function playAppleVideo() {
+            replayPanel.style.display = "none";
+
+            video.muted = false;
+            video.volume = 1;
+            video.currentTime = 0;
+
+            try {
+                await video.play();
+
+                instructions.textContent =
+                    "A for Apple video is playing!";
+            } catch (error) {
+                console.error(
+                    "Video playback error:",
+                    error
+                );
+
+                instructions.textContent =
+                    "Tap the video once to start playback.";
+            }
+        }
+
+        /*
          * Start button:
-         * 1. Unlock sound.
-         * 2. Start the camera.
+         * Unlock audio and start the MindAR camera.
          */
         startButton.addEventListener("click", async () => {
             startButton.disabled = true;
@@ -329,7 +502,7 @@
 
             try {
                 /*
-                 * Unlock sound using the user's tap.
+                 * Unlock audio using a real user interaction.
                  */
                 video.muted = false;
                 video.volume = 1;
@@ -341,7 +514,7 @@
                 video.currentTime = 0;
 
                 /*
-                 * Start MindAR camera.
+                 * Start the camera.
                  */
                 await scene.systems[
                     "mindar-image-system"
@@ -351,9 +524,12 @@
                 instructions.style.display = "block";
 
                 instructions.textContent =
-                    "Point the camera at the complete Apple page.";
+                    "Point the camera at the complete A for Apple page.";
             } catch (error) {
-                console.error("AR start error:", error);
+                console.error(
+                    "Camera or audio start error:",
+                    error
+                );
 
                 startButton.disabled = false;
                 startButton.textContent = "Try Again";
@@ -366,8 +542,7 @@
         });
 
         /*
-         * When the Apple page is detected:
-         * Show the fixed centered video box.
+         * Apple page detected.
          */
         target.addEventListener("targetFound", async () => {
             if (targetLostTimer) {
@@ -379,46 +554,27 @@
                 "Apple page detected!";
 
             /*
-             * Prevent repeated targetFound events
-             * from restarting the video.
+             * Do not restart the video repeatedly
+             * while the target remains visible.
              */
-            if (videoOpened) {
+            if (videoIsOpen) {
                 return;
             }
 
-            videoOpened = true;
+            videoIsOpen = true;
 
-            videoOverlay.style.display = "block";
-
-            try {
-                video.muted = false;
-                video.volume = 1;
-                video.currentTime = 0;
-
-                await video.play();
-            } catch (error) {
-                console.error(
-                    "Video playback error:",
-                    error
-                );
-
-                instructions.textContent =
-                    "Tap the video once to start playback.";
-            }
+            showVideoOverlay();
+            await playAppleVideo();
         });
 
         /*
-         * The video remains fixed even if tracking
-         * is briefly lost.
+         * Apple target lost.
+         * The video remains fixed and continues playing.
          */
         target.addEventListener("targetLost", () => {
             instructions.textContent =
                 "Apple page lost. Keep the page visible.";
 
-            /*
-             * Do not instantly hide the video.
-             * Wait two seconds.
-             */
             targetLostTimer = setTimeout(() => {
                 instructions.textContent =
                     "Point the camera at the Apple page again.";
@@ -426,38 +582,44 @@
         });
 
         /*
-         * Close button.
+         * Close the video manually.
          */
         closeVideoButton.addEventListener("click", () => {
             video.pause();
             video.currentTime = 0;
 
-            videoOverlay.style.display = "none";
+            replayPanel.style.display = "none";
 
-            videoOpened = false;
+            hideVideoOverlay();
+
+            videoIsOpen = false;
 
             instructions.textContent =
-                "Point the camera at the Apple page to replay.";
+                "Point the camera at the Apple page to play again.";
         });
 
         /*
-         * Reset when the video finishes.
+         * Show replay button after the video finishes.
          */
         video.addEventListener("ended", () => {
             video.pause();
             video.currentTime = 0;
 
-            videoOverlay.style.display = "none";
-
-            videoOpened = false;
+            replayPanel.style.display = "flex";
 
             instructions.textContent =
-                "Video finished. Scan the Apple page again.";
+                "Video completed. Tap Play Again or close it.";
         });
 
         /*
-         * Backup: tap the video to play it
-         * if the browser pauses it.
+         * Replay the video.
+         */
+        replayButton.addEventListener("click", async () => {
+            await playAppleVideo();
+        });
+
+        /*
+         * Backup manual playback.
          */
         video.addEventListener("click", async () => {
             if (!video.paused) {
@@ -467,10 +629,11 @@
             try {
                 video.muted = false;
                 video.volume = 1;
+
                 await video.play();
             } catch (error) {
                 console.error(
-                    "Manual playback error:",
+                    "Manual video playback error:",
                     error
                 );
             }
