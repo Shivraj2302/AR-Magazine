@@ -6,7 +6,8 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
+        content="width=device-width, initial-scale=1.0,
+        maximum-scale=1.0, user-scalable=no"
     >
 
     <title>AR Magazine - A for Apple</title>
@@ -29,6 +30,7 @@
             font-family: Arial, sans-serif;
         }
 
+        /* Full-screen AR camera */
         a-scene {
             position: fixed !important;
             inset: 0;
@@ -43,14 +45,16 @@
             height: 100dvh !important;
         }
 
+        /* Hide VR button */
         .a-enter-vr-button {
             display: none !important;
         }
 
+        /* Opening screen */
         #start-screen {
             position: fixed;
             inset: 0;
-            z-index: 3000;
+            z-index: 5000;
 
             display: flex;
             flex-direction: column;
@@ -70,9 +74,8 @@
         }
 
         #start-screen p {
-            max-width: 420px;
+            max-width: 430px;
             margin: 0;
-
             line-height: 1.5;
             color: #333;
         }
@@ -97,39 +100,127 @@
             opacity: 0.6;
         }
 
+        /* Instruction message */
         #instructions {
             position: fixed;
             top: 18px;
             left: 50%;
-            z-index: 2000;
+            z-index: 3500;
 
             display: none;
 
             width: 88%;
             max-width: 450px;
-            padding: 14px;
+            padding: 12px;
 
             box-sizing: border-box;
-            border-radius: 12px;
+            border-radius: 10px;
 
             text-align: center;
-            font-size: 18px;
+            font-size: 16px;
 
             color: white;
             background: rgba(0, 0, 0, 0.72);
 
             transform: translateX(-50%);
         }
+
+        /*
+         * Fixed video container.
+         * It is connected to the mobile screen,
+         * not to the printed Apple target.
+         */
+        #video-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            z-index: 4000;
+
+            display: none;
+
+            width: 94vw;
+            max-width: 900px;
+            aspect-ratio: 16 / 9;
+
+            border: 4px solid white;
+            border-radius: 14px;
+
+            box-sizing: border-box;
+            overflow: hidden;
+
+            background: black;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+
+            transform: translate(-50%, -50%);
+        }
+
+        #apple-video {
+            display: block;
+
+            width: 100%;
+            height: 100%;
+
+            background: black;
+
+            /*
+             * contain = shows the complete video.
+             * No cropping and no stretching.
+             */
+            object-fit: contain;
+        }
+
+        /* Close button */
+        #close-video {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 10;
+
+            width: 38px;
+            height: 38px;
+
+            border: none;
+            border-radius: 50%;
+
+            font-size: 22px;
+            font-weight: bold;
+            line-height: 38px;
+
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+
+            cursor: pointer;
+        }
+
+        /*
+         * When the phone is held horizontally,
+         * limit video height so it remains visible.
+         */
+        @media screen and (orientation: landscape) {
+            #video-overlay {
+                width: auto;
+                height: 88dvh;
+                max-height: 88dvh;
+                aspect-ratio: 16 / 9;
+            }
+
+            #instructions {
+                top: 8px;
+                padding: 8px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 
 <body>
 
+    <!-- Start screen -->
     <div id="start-screen">
         <h1>A for Apple AR</h1>
 
         <p>
-            Tap the button, allow camera access and point your phone
+            Tap the button, allow camera access and point the camera
             at the complete Apple page.
         </p>
 
@@ -138,10 +229,32 @@
         </button>
     </div>
 
+    <!-- Instructions -->
     <div id="instructions">
-        Point the complete Apple page toward the camera.
+        Point the camera at the complete Apple page.
     </div>
 
+    <!-- Fixed horizontal video box -->
+    <div id="video-overlay">
+
+        <button
+            id="close-video"
+            aria-label="Close video"
+        >
+            ×
+        </button>
+
+        <video
+            id="apple-video"
+            src="./assets/apple-video.mp4"
+            preload="auto"
+            playsinline
+            webkit-playsinline
+        ></video>
+
+    </div>
+
+    <!-- MindAR camera scene -->
     <a-scene
         mindar-image="
             imageTargetSrc: ./assets/targets.mind;
@@ -164,91 +277,59 @@
         device-orientation-permission-ui="enabled: false"
     >
 
-        <a-assets timeout="20000">
-            <video
-                id="apple-video"
-                src="./assets/apple-video.mp4"
-                preload="auto"
-                playsinline
-                webkit-playsinline
-                crossorigin="anonymous"
-            ></video>
-        </a-assets>
-
         <a-camera
             position="0 0 0"
             look-controls="enabled: false"
         ></a-camera>
 
+        <!--
+            This entity only detects the Apple page.
+            No video plane is placed inside it.
+        -->
         <a-entity
             id="apple-target"
             mindar-image-target="targetIndex: 0"
-        >
-
-            <!-- Horizontal 16:9 video -->
-            <a-plane
-                id="video-plane"
-                position="0 0 0.02"
-                width="1.78"
-                height="1"
-                material="
-                    src: #apple-video;
-                    shader: flat;
-                    side: double;
-                "
-            ></a-plane>
-
-        </a-entity>
+        ></a-entity>
 
     </a-scene>
 
     <script>
         const scene = document.querySelector("a-scene");
         const target = document.querySelector("#apple-target");
-        const video = document.querySelector("#apple-video");
-        const videoPlane = document.querySelector("#video-plane");
 
-        const startScreen = document.querySelector("#start-screen");
-        const startButton = document.querySelector("#start-button");
-        const instructions = document.querySelector("#instructions");
+        const startScreen =
+            document.querySelector("#start-screen");
 
-        let targetIsVisible = false;
-        let lostTargetTimer = null;
-        let videoHasStarted = false;
+        const startButton =
+            document.querySelector("#start-button");
+
+        const instructions =
+            document.querySelector("#instructions");
+
+        const videoOverlay =
+            document.querySelector("#video-overlay");
+
+        const video =
+            document.querySelector("#apple-video");
+
+        const closeVideoButton =
+            document.querySelector("#close-video");
+
+        let videoOpened = false;
+        let targetLostTimer = null;
 
         /*
-         * Automatically maintain the video's real horizontal aspect ratio.
+         * Start button:
+         * 1. Unlock sound.
+         * 2. Start the camera.
          */
-        video.addEventListener("loadedmetadata", () => {
-            const aspectRatio =
-                video.videoWidth / video.videoHeight;
-
-            /*
-             * Keep the video horizontal and wide.
-             */
-            if (aspectRatio >= 1) {
-                videoPlane.setAttribute("width", 1.9);
-                videoPlane.setAttribute(
-                    "height",
-                    1.9 / aspectRatio
-                );
-            } else {
-                /*
-                 * If the uploaded video is portrait,
-                 * force it into a horizontal display area.
-                 */
-                videoPlane.setAttribute("width", 1.9);
-                videoPlane.setAttribute("height", 1.07);
-            }
-        });
-
         startButton.addEventListener("click", async () => {
             startButton.disabled = true;
             startButton.textContent = "Starting camera...";
 
             try {
                 /*
-                 * Unlock sound through the user's button click.
+                 * Unlock sound using the user's tap.
                  */
                 video.muted = false;
                 video.volume = 1;
@@ -260,15 +341,17 @@
                 video.currentTime = 0;
 
                 /*
-                 * Start MindAR.
+                 * Start MindAR camera.
                  */
-                await scene.systems["mindar-image-system"].start();
+                await scene.systems[
+                    "mindar-image-system"
+                ].start();
 
                 startScreen.style.display = "none";
                 instructions.style.display = "block";
 
                 instructions.textContent =
-                    "Keep the complete Apple page inside the camera.";
+                    "Point the camera at the complete Apple page.";
             } catch (error) {
                 console.error("AR start error:", error);
 
@@ -276,68 +359,108 @@
                 startButton.textContent = "Try Again";
 
                 alert(
-                    "The camera or audio could not start. " +
-                    "Please allow camera access and try again."
+                    "Camera or audio could not start. " +
+                    "Allow camera permission and try again."
                 );
             }
         });
 
+        /*
+         * When the Apple page is detected:
+         * Show the fixed centered video box.
+         */
         target.addEventListener("targetFound", async () => {
-            targetIsVisible = true;
-
-            if (lostTargetTimer) {
-                clearTimeout(lostTargetTimer);
-                lostTargetTimer = null;
+            if (targetLostTimer) {
+                clearTimeout(targetLostTimer);
+                targetLostTimer = null;
             }
 
-            instructions.textContent = "Apple page detected!";
+            instructions.textContent =
+                "Apple page detected!";
+
+            /*
+             * Prevent repeated targetFound events
+             * from restarting the video.
+             */
+            if (videoOpened) {
+                return;
+            }
+
+            videoOpened = true;
+
+            videoOverlay.style.display = "block";
 
             try {
                 video.muted = false;
                 video.volume = 1;
+                video.currentTime = 0;
 
-                if (!videoHasStarted) {
-                    video.currentTime = 0;
-                    videoHasStarted = true;
-                }
-
-                if (video.paused) {
-                    await video.play();
-                }
+                await video.play();
             } catch (error) {
-                console.error("Video playback error:", error);
+                console.error(
+                    "Video playback error:",
+                    error
+                );
 
                 instructions.textContent =
-                    "Apple detected. Tap the screen once to play.";
+                    "Tap the video once to start playback.";
             }
         });
 
+        /*
+         * The video remains fixed even if tracking
+         * is briefly lost.
+         */
         target.addEventListener("targetLost", () => {
-            targetIsVisible = false;
-
             instructions.textContent =
-                "Hold steady—looking for the Apple page...";
+                "Apple page lost. Keep the page visible.";
 
-            lostTargetTimer = setTimeout(() => {
-                if (!targetIsVisible) {
-                    video.pause();
-
-                    instructions.textContent =
-                        "Keep the complete Apple page inside the camera.";
-                }
-            }, 800);
+            /*
+             * Do not instantly hide the video.
+             * Wait two seconds.
+             */
+            targetLostTimer = setTimeout(() => {
+                instructions.textContent =
+                    "Point the camera at the Apple page again.";
+            }, 2000);
         });
 
-        video.addEventListener("ended", () => {
-            videoHasStarted = false;
+        /*
+         * Close button.
+         */
+        closeVideoButton.addEventListener("click", () => {
+            video.pause();
             video.currentTime = 0;
 
+            videoOverlay.style.display = "none";
+
+            videoOpened = false;
+
             instructions.textContent =
-                "Video finished. Scan the Apple page again to replay.";
+                "Point the camera at the Apple page to replay.";
         });
 
-        document.body.addEventListener("click", async () => {
-            if (!targetIsVisible || !video.paused) {
+        /*
+         * Reset when the video finishes.
+         */
+        video.addEventListener("ended", () => {
+            video.pause();
+            video.currentTime = 0;
+
+            videoOverlay.style.display = "none";
+
+            videoOpened = false;
+
+            instructions.textContent =
+                "Video finished. Scan the Apple page again.";
+        });
+
+        /*
+         * Backup: tap the video to play it
+         * if the browser pauses it.
+         */
+        video.addEventListener("click", async () => {
+            if (!video.paused) {
                 return;
             }
 
@@ -345,10 +468,11 @@
                 video.muted = false;
                 video.volume = 1;
                 await video.play();
-
-                instructions.textContent = "Apple video playing!";
             } catch (error) {
-                console.error("Tap-to-play error:", error);
+                console.error(
+                    "Manual playback error:",
+                    error
+                );
             }
         });
     </script>
