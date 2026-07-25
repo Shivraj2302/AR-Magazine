@@ -33,10 +33,22 @@
 
 <body>
 <h2 id="version-test">VERSION 5</h2>
+
+    <div id="instructions">
+        Point the complete Apple page toward the camera.
+    </div>
+
     <a-scene
-        mindar-image="imageTargetSrc: ./assets/targets.mind;"
+        mindar-image="
+            imageTargetSrc: ./assets/targets.mind;
+            autoStart: true;
+        "
         color-space="sRGB"
-        renderer="colorManagement: true; physicallyCorrectLights: true;"
+        renderer="
+            colorManagement: true;
+            physicallyCorrectLights: true;
+            antialias: true;
+        "
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
     >
@@ -47,17 +59,20 @@
         ></a-camera>
 
         <a-entity
+            id="apple-target"
             mindar-image-target="targetIndex: 0"
         >
-
             <a-plane
-                position="0 0 0"
+                position="0 0 0.02"
                 width="1"
                 height="1.4"
-                color="red"
-                opacity="0.8"
+                material="
+                    color: red;
+                    opacity: 0.85;
+                    transparent: true;
+                    side: double;
+                "
             ></a-plane>
-
         </a-entity>
 
     </a-scene>
